@@ -43,8 +43,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "c5722e65-5cd5-4a4b-b5bf-1d78abc82018"
+        "projectId": "4ad63cde-989a-4698-bd9e-085ba4fb4be4"
       }
-    }
+    },
+    "owner": "rizwanmern"
   }
 }
