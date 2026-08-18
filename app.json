@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "universalshopkhata",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/images/loading.png",
       "resizeMode": "contain",
@@ -32,20 +32,17 @@
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/loading.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
-        }
-      ],
       "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c5722e65-5cd5-4a4b-b5bf-1d78abc82018"
+      }
     }
   }
 }
