@@ -32,20 +32,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store",
-      "expo-sqlite",
-      "expo-localization"
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "4ad63cde-989a-4698-bd9e-085ba4fb4be4"
-      }
-    },
-    "owner": "rizwanmern"
+      "router": {}
+    }
   }
 }
