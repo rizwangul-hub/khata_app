@@ -13,7 +13,15 @@ import { PDFService } from '@/src/services/pdfService';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, Image as ImageIcon, X, ArrowUpRight, Share2 } from 'lucide-react-native';
+import { Camera, Image as ImageIcon, X, ArrowUpRight, Plus, Trash2, ShoppingBag } from 'lucide-react-native';
+
+interface ItemRow {
+  id: string;
+  itemName: string;
+  amount: string;
+  weight: string;
+  weightUnit: string;
+}
 
 export default function AddCreditScreen() {
   const { t, i18n } = useTranslation();
@@ -23,15 +31,15 @@ export default function AddCreditScreen() {
   const shop = useAuthStore((state) => state.shop);
   const addCredit = useLedgerStore((state) => state.addCredit);
 
-  const [itemName, setItemName] = useState('');
-  const [amount, setAmount] = useState('');
-  const [weight, setWeight] = useState('');
-  const [weightUnit, setWeightUnit] = useState('kg');
+  // Dynamic multi-item state
+  const [items, setItems] = useState<ItemRow[]>([
+    { id: Crypto.randomUUID(), itemName: '', amount: '', weight: '', weightUnit: 'kg' },
+  ]);
+
   const [notes, setNotes] = useState('');
   const [billUri, setBillUri] = useState<string | null>(null);
 
-  const [itemError, setItemError] = useState<string | null>(null);
-  const [amountError, setAmountError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Post-save document preview modal
@@ -41,6 +49,36 @@ export default function AddCreditScreen() {
     pdfUri: string;
     fileName: string;
   }>({ visible: false, html: '', pdfUri: '', fileName: '' });
+
+  // Add a new empty item row
+  const handleAddItemRow = () => {
+    setItems((prev) => [
+      ...prev,
+      { id: Crypto.randomUUID(), itemName: '', amount: '', weight: '', weightUnit: 'kg' },
+    ]);
+  };
+
+  // Remove an item row
+  const handleRemoveItemRow = (id: string) => {
+    if (items.length <= 1) return;
+    setItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  // Update specific field in item row
+  const handleUpdateItemRow = (id: string, field: keyof ItemRow, value: string) => {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
+    if (formError) setFormError(null);
+  };
+
+  // Calculate live Grand Total
+  const calculateTotal = () => {
+    return items.reduce((sum, item) => {
+      const parsed = parseFloat(item.amount);
+      return sum + (isNaN(parsed) ? 0 : parsed);
+    }, 0);
+  };
 
   const handlePickBillImage = async (mode: 'camera' | 'gallery') => {
     try {
@@ -70,17 +108,31 @@ export default function AddCreditScreen() {
   };
 
   const handleSave = async () => {
-    setItemError(null);
-    setAmountError(null);
+    setFormError(null);
 
-    if (!itemName || !itemName.trim()) {
-      setItemError(t('ledger.itemNameRequired'));
+    // Validate items
+    const validItems = items.filter((item) => item.itemName.trim() !== '');
+    if (validItems.length === 0) {
+      setFormError('Please enter at least one item name.');
       return;
     }
 
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      setAmountError(t('ledger.amountRequired'));
+    let hasInvalidAmount = false;
+    validItems.forEach((item) => {
+      const num = parseFloat(item.amount);
+      if (isNaN(num) || num <= 0) {
+        hasInvalidAmount = true;
+      }
+    });
+
+    if (hasInvalidAmount) {
+      setFormError('Please enter a valid price (> 0) for all items.');
+      return;
+    }
+
+    const totalAmount = calculateTotal();
+    if (totalAmount <= 0) {
+      setFormError('Grand total price must be greater than 0.');
       return;
     }
 
@@ -88,14 +140,31 @@ export default function AddCreditScreen() {
 
     setIsLoading(true);
 
+    // Format item summary and detailed breakdown
+    const primaryItemName = validItems.map((i) => i.itemName.trim()).join(', ');
+    const firstWeight = validItems[0].weight ? parseFloat(validItems[0].weight) : undefined;
+    const firstWeightUnit = validItems[0].weight ? validItems[0].weightUnit : undefined;
+
+    // Create item breakdown string for notes / receipts
+    const itemsBreakdown = validItems
+      .map((i, idx) => {
+        const weightStr = i.weight ? ` (${i.weight} ${i.weightUnit || 'kg'})` : '';
+        return `${idx + 1}. ${i.itemName.trim()}${weightStr} - Rs. ${i.amount}`;
+      })
+      .join('\n');
+
+    const combinedNotes = notes.trim()
+      ? `${itemsBreakdown}\n\nNotes: ${notes.trim()}`
+      : itemsBreakdown;
+
     const customer = await getCustomerByIdLocal(customerId);
     const success = await addCredit({
       customerId,
-      itemName: itemName.trim(),
-      amount: numAmount,
-      weight: weight ? parseFloat(weight) : undefined,
-      weightUnit: weight ? weightUnit : undefined,
-      notes: notes.trim(),
+      itemName: primaryItemName,
+      amount: totalAmount,
+      weight: validItems.length === 1 ? firstWeight : undefined,
+      weightUnit: validItems.length === 1 ? firstWeightUnit : undefined,
+      notes: combinedNotes,
       billLocalUri: billUri || undefined,
     });
 
@@ -106,11 +175,11 @@ export default function AddCreditScreen() {
       const createdTx = {
         id: Crypto.randomUUID(),
         type: 'credit' as const,
-        itemName: itemName.trim(),
-        amount: numAmount,
-        weight: weight ? parseFloat(weight) : undefined,
-        weightUnit: weight ? weightUnit : undefined,
-        notes: notes.trim(),
+        itemName: primaryItemName,
+        amount: totalAmount,
+        weight: validItems.length === 1 ? firstWeight : undefined,
+        weightUnit: validItems.length === 1 ? firstWeightUnit : undefined,
+        notes: combinedNotes,
         transactionDate: new Date().toISOString(),
       };
 
@@ -133,6 +202,8 @@ export default function AddCreditScreen() {
     }
   };
 
+  const grandTotal = calculateTotal();
+
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="bg-gray-50 dark:bg-gray-900 p-4">
       <Card className="p-6 mb-6">
@@ -145,46 +216,103 @@ export default function AddCreditScreen() {
           </Typography>
         </View>
 
-        <InputField
-          label={`${t('ledger.itemName')} *`}
-          value={itemName}
-          onChangeText={(val) => {
-            setItemName(val);
-            if (itemError) setItemError(null);
-          }}
-          placeholder="e.g. Rice, Sugar, Oil"
-          error={itemError || undefined}
-        />
-
-        <InputField
-          label={`${t('ledger.price')} * (Rs.)`}
-          value={amount}
-          onChangeText={(val) => {
-            setAmount(val);
-            if (amountError) setAmountError(null);
-          }}
-          placeholder="1000"
-          keyboardType="decimal-pad"
-          error={amountError || undefined}
-        />
-
-        <View className="flex-row gap-3 mb-2">
-          <View className="flex-1">
-            <InputField
-              label={t('ledger.weight')}
-              value={weight}
-              onChangeText={setWeight}
-              placeholder="e.g. 10, 2.5"
-              keyboardType="decimal-pad"
-            />
+        {formError && (
+          <View className="bg-red-50 dark:bg-red-900/30 p-3 rounded-xl border border-red-200 dark:border-red-800 mb-4">
+            <Typography variant="caption" className="text-red-600 dark:text-red-400 font-semibold text-center">
+              {formError}
+            </Typography>
           </View>
-          <View className="w-1/3">
+        )}
+
+        {/* Dynamic Item Rows */}
+        <Typography variant="h3" className="font-bold mb-3 text-gray-800 dark:text-gray-200">
+          Items List ({items.length})
+        </Typography>
+
+        {items.map((item, index) => (
+          <View
+            key={item.id}
+            className="bg-gray-100 dark:bg-gray-800/60 p-4 rounded-xl border border-gray-200 dark:border-gray-700 mb-4"
+          >
+            <View className="flex-row justify-between items-center mb-2">
+              <View className="flex-row items-center">
+                <ShoppingBag size={16} color="#ef4444" className="mr-1.5" />
+                <Typography variant="caption" className="font-bold uppercase text-red-600 dark:text-red-400">
+                  Item #{index + 1}
+                </Typography>
+              </View>
+
+              {items.length > 1 && (
+                <TouchableOpacity
+                  className="flex-row items-center bg-red-100 dark:bg-red-900/40 px-2.5 py-1 rounded-lg"
+                  onPress={() => handleRemoveItemRow(item.id)}
+                >
+                  <Trash2 size={14} color="#ef4444" />
+                  <Typography variant="caption" className="text-red-600 dark:text-red-400 ml-1 font-semibold">
+                    Remove
+                  </Typography>
+                </TouchableOpacity>
+              )}
+            </View>
+
             <InputField
-              label="Unit"
-              value={weightUnit}
-              onChangeText={setWeightUnit}
-              placeholder="kg / g / L"
+              label={`${t('ledger.itemName')} *`}
+              value={item.itemName}
+              onChangeText={(val) => handleUpdateItemRow(item.id, 'itemName', val)}
+              placeholder="e.g. Rice, Sugar, Oil, Flour"
             />
+
+            <View className="flex-row gap-2">
+              <View className="flex-1">
+                <InputField
+                  label="Price * (Rs.)"
+                  value={item.amount}
+                  onChangeText={(val) => handleUpdateItemRow(item.id, 'amount', val)}
+                  placeholder="500"
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View className="flex-1">
+                <InputField
+                  label={t('ledger.weight')}
+                  value={item.weight}
+                  onChangeText={(val) => handleUpdateItemRow(item.id, 'weight', val)}
+                  placeholder="5"
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View className="w-20">
+                <InputField
+                  label="Unit"
+                  value={item.weightUnit}
+                  onChangeText={(val) => handleUpdateItemRow(item.id, 'weightUnit', val)}
+                  placeholder="kg"
+                />
+              </View>
+            </View>
+          </View>
+        ))}
+
+        {/* Add Item Button */}
+        <TouchableOpacity
+          className="flex-row items-center justify-center bg-red-50 dark:bg-red-900/20 border border-dashed border-red-400 p-3.5 rounded-xl mb-6 active:bg-red-100"
+          onPress={handleAddItemRow}
+        >
+          <Plus size={20} color="#ef4444" className="mr-2" />
+          <Typography variant="body" className="font-bold text-red-600 dark:text-red-400">
+            + Add Another Item
+          </Typography>
+        </TouchableOpacity>
+
+        {/* Live Grand Total Card */}
+        <View className="bg-red-50 dark:bg-red-900/30 p-4 rounded-xl border border-red-200 dark:border-red-800 mb-6 flex-row justify-between items-center">
+          <View>
+            <Typography variant="caption" className="text-gray-600 dark:text-gray-400 font-medium">
+              Grand Total ({items.length} {items.length === 1 ? 'item' : 'items'})
+            </Typography>
+            <Typography variant="h2" className="text-red-600 dark:text-red-400 font-extrabold">
+              Rs. {grandTotal.toLocaleString()}
+            </Typography>
           </View>
         </View>
 
@@ -192,9 +320,9 @@ export default function AddCreditScreen() {
           label={t('ledger.notes')}
           value={notes}
           onChangeText={setNotes}
-          placeholder="Notes or details"
+          placeholder="Additional notes or details"
           multiline
-          numberOfLines={3}
+          numberOfLines={2}
           style={{ textAlignVertical: 'top' }}
         />
 
@@ -237,7 +365,7 @@ export default function AddCreditScreen() {
         )}
 
         <Button
-          title={t('ledger.addCredit')}
+          title={`${t('ledger.addCredit')} (Rs. ${grandTotal.toLocaleString()})`}
           onPress={handleSave}
           isLoading={isLoading}
           className="mt-2 mb-3 bg-red-600 active:bg-red-700"
