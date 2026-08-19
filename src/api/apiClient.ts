@@ -2,13 +2,18 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 
-// Auto-detect PC IP address when running on physical devices via Expo Go or use Live Vercel Backend
+// Auto-detect PC IP address only during local dev (__DEV__) or use Live Vercel Backend in Release APK
 const getBaseUrl = () => {
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
 
-  // Extract host IP address from Expo Metro packager during local dev
+  // Production Live Vercel Backend URL for Standalone Release APK Builds
+  if (!__DEV__) {
+    return 'https://khata-backend-lqos.vercel.app/api';
+  }
+
+  // Extract host IP address from Expo Metro packager during local dev (__DEV__)
   const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
   if (hostUri) {
     const ip = hostUri.split(':')[0];
@@ -17,7 +22,7 @@ const getBaseUrl = () => {
     }
   }
 
-  // Production Live Vercel Backend URL
+  // Default Production Live Vercel Backend URL
   return 'https://khata-backend-lqos.vercel.app/api';
 };
 
