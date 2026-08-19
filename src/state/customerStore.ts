@@ -56,8 +56,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
   },
 
   fetchCustomers: async () => {
-    const shopId = useAuthStore.getState().shopId;
-    if (!shopId) return;
+    const shopId = useAuthStore.getState().shopId || 'local_shop';
 
     set({ isLoading: true });
     try {
@@ -70,8 +69,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
   },
 
   addCustomer: async (input) => {
-    const shopId = useAuthStore.getState().shopId;
-    if (!shopId) return null;
+    const shopId = useAuthStore.getState().shopId || 'local_shop';
 
     try {
       const created = await createCustomerLocal({ ...input, shopId });

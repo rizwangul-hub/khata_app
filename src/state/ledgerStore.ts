@@ -84,8 +84,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   },
 
   fetchKhataCustomers: async (searchQuery: string = '') => {
-    const shopId = useAuthStore.getState().shopId;
-    if (!shopId) return;
+    const shopId = useAuthStore.getState().shopId || 'local_shop';
 
     set({ isLoading: true });
     try {
@@ -98,8 +97,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   },
 
   fetchTotalShopDebt: async () => {
-    const shopId = useAuthStore.getState().shopId;
-    if (!shopId) return;
+    const shopId = useAuthStore.getState().shopId || 'local_shop';
 
     try {
       const debt = await getShopTotalDebtLocal(shopId);
@@ -110,8 +108,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   },
 
   addCredit: async (input) => {
-    const shopId = useAuthStore.getState().shopId;
-    if (!shopId) return false;
+    const shopId = useAuthStore.getState().shopId || 'local_shop';
 
     try {
       await createLedgerLocal({ ...input, shopId, type: 'credit' });
@@ -126,8 +123,7 @@ export const useLedgerStore = create<LedgerState>((set, get) => ({
   },
 
   addPayment: async (input) => {
-    const shopId = useAuthStore.getState().shopId;
-    if (!shopId) return false;
+    const shopId = useAuthStore.getState().shopId || 'local_shop';
 
     try {
       await createLedgerLocal({ ...input, shopId, type: 'payment' });

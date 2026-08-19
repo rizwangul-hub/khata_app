@@ -71,19 +71,25 @@ export default function AddCustomerScreen() {
 
   const executeSave = async () => {
     setIsLoading(true);
-    const created = await addCustomer({
-      name: name.trim(),
-      phone: phone.trim(),
-      address: address.trim(),
-      imageLocalUri: imageUri || undefined,
-    });
-    setIsLoading(false);
+    try {
+      const created = await addCustomer({
+        name: name.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        imageLocalUri: imageUri || undefined,
+      });
+      setIsLoading(false);
 
-    if (created) {
-      Alert.alert(t('common.success'), t('customer.customerAddedSuccess'), [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
-    } else {
+      if (created) {
+        Alert.alert(t('common.success'), t('customer.customerAddedSuccess'), [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      } else {
+        Alert.alert(t('common.error'), 'Unable to save customer. Please try again.');
+      }
+    } catch (err) {
+      console.error('Save customer error', err);
+      setIsLoading(false);
       Alert.alert(t('common.error'), 'Unable to save customer. Please try again.');
     }
   };
@@ -96,8 +102,9 @@ export default function AddCustomerScreen() {
       return;
     }
 
-    if (shopId) {
-      const dupCheck = await checkDuplicateCustomer(shopId, name, phone);
+    const activeShopId = shopId || 'local_shop';
+    try {
+      const dupCheck = await checkDuplicateCustomer(activeShopId, name, phone);
       if (dupCheck.duplicateName || dupCheck.duplicatePhone) {
         let msg = 'A customer with this name or phone already exists in your shop khata. Do you want to continue anyway?';
         if (dupCheck.duplicatePhone) {
@@ -110,6 +117,8 @@ export default function AddCustomerScreen() {
         ]);
         return;
       }
+    } catch (err) {
+      console.error('Duplicate check error', err);
     }
 
     executeSave();
