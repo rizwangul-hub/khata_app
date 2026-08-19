@@ -59,11 +59,12 @@ export default function RootLayout() {
     if (!navigationState?.key || !isReady || isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inAppGroup = segments[0] === '(app)';
 
     try {
       if (!isAuthenticated && !inAuthGroup) {
         router.replace('/(auth)/login' as any);
-      } else if (isAuthenticated && inAuthGroup) {
+      } else if (isAuthenticated && !inAppGroup) {
         router.replace('/(app)' as any);
       }
     } catch (e) {
