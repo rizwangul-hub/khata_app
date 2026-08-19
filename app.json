@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "universalshopkhata",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/loading.png",
       "resizeMode": "contain",
@@ -20,7 +20,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
-        "foregroundImage": "./assets/images/icon.png"
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "package": "com.universalshopkhata.app",
       "edgeToEdgeEnabled": true,
@@ -40,9 +40,7 @@
             "compileSdkVersion": 35,
             "targetSdkVersion": 35,
             "minSdkVersion": 24,
-            "buildToolsVersion": "35.0.0",
-            "enableMinifyInReleaseBuilds": false,
-            "enableShrinkResourcesInReleaseBuilds": false
+            "buildToolsVersion": "35.0.0"
           }
         }
       ]
