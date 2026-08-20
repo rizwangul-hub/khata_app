@@ -10,17 +10,19 @@
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/loading.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "resizeMode": "cover",
+      "backgroundColor": "#0f172a"
     },
     "ios": {
       "supportsTablet": true,
       "icon": "./assets/images/icon.png"
     },
     "android": {
+      "icon": "./assets/images/icon.png",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
-        "foregroundImage": "./assets/images/android-icon-foreground.png"
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/icon.png"
       },
       "package": "com.universalshopkhata.app",
       "edgeToEdgeEnabled": true,

@@ -48,41 +48,55 @@ export default function AddPaymentScreen() {
 
     setIsLoading(true);
 
-    const customer = await getCustomerByIdLocal(customerId);
-    const success = await addPayment({
-      customerId,
-      amount: numAmount,
-      notes: notes.trim(),
-    });
-
-    setIsLoading(false);
-
-    if (success && customer) {
-      const isUrdu = i18n.language === 'ur';
-      const createdTx = {
-        id: Crypto.randomUUID(),
-        type: 'payment' as const,
+    try {
+      const customer = await getCustomerByIdLocal(customerId);
+      const success = await addPayment({
+        customerId,
         amount: numAmount,
         notes: notes.trim(),
-        transactionDate: new Date().toISOString(),
-      };
-
-      const doc = await PDFService.generatePaymentReceipt(
-        shop || { shopName: 'Universal Store' },
-        customer,
-        createdTx,
-        customer.balance || 0,
-        isUrdu
-      );
-
-      setPreviewModal({
-        visible: true,
-        html: doc.html,
-        pdfUri: doc.uri,
-        fileName: doc.fileName,
       });
-    } else {
+
+      if (success && customer) {
+        const isUrdu = i18n.language === 'ur';
+        const createdTx = {
+          id: Crypto.randomUUID(),
+          type: 'payment' as const,
+          amount: numAmount,
+          notes: notes.trim(),
+          transactionDate: new Date().toISOString(),
+        };
+
+        const doc = await PDFService.generatePaymentReceipt(
+          shop || { shopName: 'Universal Store' },
+          customer,
+          createdTx,
+          customer.balance || 0,
+          isUrdu
+        ).catch((pdfErr) => {
+          console.error('PDF generation error', pdfErr);
+          return { uri: '', html: '', fileName: '' };
+        });
+
+        if (doc && doc.html) {
+          setPreviewModal({
+            visible: true,
+            html: doc.html,
+            pdfUri: doc.uri,
+            fileName: doc.fileName,
+          });
+        } else {
+          Alert.alert(t('common.success'), 'Payment recorded successfully.', [
+            { text: 'OK', onPress: () => router.back() },
+          ]);
+        }
+      } else {
+        Alert.alert(t('common.error'), 'Unable to record payment. Please try again.');
+      }
+    } catch (err) {
+      console.error('Save payment error', err);
       Alert.alert(t('common.error'), 'Unable to record payment. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
